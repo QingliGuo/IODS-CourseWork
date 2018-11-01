@@ -1,11 +1,16 @@
 ---
 title: "IODS course project"
+author: Qingli Guo  <<qingli.guo@helsinki.fi>>
 output:
   html_document:
-    theme: cosmo
+    theme: united
     toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: false
     toc_depth: 2
     fig_caption: true
+    highlight: tango
     fig_width: 6
     fig_height: 4
     code_folding: hide

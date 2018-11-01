@@ -1,4 +1,8 @@
 
 # About the project
 
-*Write a short description about the course and add a link to your github repository here. This is an R markdown (.Rmd) file so you can use R markdown syntax. See the 'Useful links' page in the mooc area (chapter 1) for instructions.*
++ [**Introduction to Open Data Science**](https://mooc.helsinki.fi/course/view.php?id=158#section-0)  
+
+> ##### The couse is taught in R. Every week we will have an assignment to work on for a specific topic. [R markdown](https://bookdown.org/yihui/rmarkdown/) will be used to reproduce the analysis, which is of great importance in science. Eventually, we will combine all the individual MarkDown files together as a single [work diary](https://qingliguo.github.io/IODS-project/). Doesn't it sound amazing? So let's gooooo!
+
++ [**GitHub website**](https://github.com/QingliGuo/IODS-project)
