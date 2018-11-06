@@ -1,9 +1,3 @@
----
-output: 
-  html_document:
-    keep_md: true
----
-
 [IDOS](https://mooc.helsinki.fi/course/view.php?id=158#section-0) 
 -----
 > IDOS stands for introduction of open data science.
