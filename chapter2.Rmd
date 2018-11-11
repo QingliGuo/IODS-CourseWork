@@ -1,7 +1,124 @@
-# Insert chapter 2 title here
+# Regression and model validation
 
-*Describe the work you have done this week and summarize your learning.*
+__Summary of week2 study__
 
-- Describe your work and results clearly. 
-- Assume the reader has an introductory course level understanding of writing and reading R code as well as statistical methods
-- Assume the reader has no previous knowledge of your data or the more advanced methods you are using  
+
++ _In week2, I self-studied the data wrangling skills, simple data visulization, single and multi variant(s) regression, regression diagnostics, model validation and prediction from [DataCamp](https://campus.datacamp.com/courses/helsinki-open-data-science/regression-and-model-validation?ex=1);_
+
++ _I have learnt not only the actual skills of regression analysis, but also the knowledge of how and why we need to model the data, and how to validate & use the models._
+
+```{r}
+# Loading packages
+library(ggplot2)
+library(GGally)
+```
+
+## 1. Read the data
+The original data is downloaded from [](http://www.helsinki.fi/~kvehkala/JYTmooc/JYTOPKYS3-data.txt). The sample collection information could be found [here](http://s3.amazonaws.com/assets.datacamp.com/production/course_2218/datasets/learning2014.txt). The original data contains 180 observations from 60 variables. There are seven variables extracted from the original dataset by [our local script](https://github.com/QingliGuo/IODS-project/Data/Data_wrangling_IODS_week2.R), namely, `gender`, `age`, `attitude`, `deep`, `stra`, `surf` and `points`.
+
+```{r}
+# Read the new dataset from the loal folder and named it as learning2014.
+learning2014 <- read.csv("data_ready_for_analysis_week2.txt")
+# The first few heading lines in learning2014.
+head(learning2014)
+# learning2014 has 183 rows with 7 columns.
+dim(learning2014)
+# learning2014 is a dataframe, and it contains 7 variables realated to 183 observations.
+str(learning2014)
+```
+
+The three variables named `gender`, `name` and `points` are extracted from the [original data](http://www.helsinki.fi/~kvehkala/JYTmooc/JYTOPKYS3-data.txt). `Points` means the total points here.
+
+For the other 4 variables, the mean values are taken from the related columns. For example, `attitude` is the mean of 10 variables (`rowsum(Da+Db+Dc+Dd+De+Df+Dg+Dh+Di+Dj)`) from the original dataset. The ten variables are measured from the following five perspectives:
+
++ Confidence in doing statistics
++ Value of statistics
++ Interest in statistics
++ Confidence in doing math
++ Affect toward statistics
+
+`deep` stands for three deep approches combined from 12 original variables. It measures:
+
++ Seeking Meaning
++ Relating Ideas
++ Use of Evidence
+
+`stra` means strategic approach normalized from 8 original variables. It measures:
+
++ Organized Studying
++ Time Management
+
+`surf` stands for surface approach from 12 original variables. It measures:
+
++ Lack of Purpose
++ Unrelated Memorising 
++ Syllabus-boundness
+
+For further information, please check the [online information](http://s3.amazonaws.com/assets.datacamp.com/production/course_2218/datasets/learning2014.txt) and the [local script](https://github.com/QingliGuo/IODS-project/Data/Data_wrangling_IODS_week2.R).
+
+## 2. Graphical overview of the data
+
+```{r}
+ggpairs(learning2014, mapping = aes(color=gender,alpha=0.3), 
+        lower = list(combo =wrap("facethist", bins = 20)),
+        upper = list(continuous = wrap("cor", size = 2.5)))
+```
+
+From the pair-wise comparison plot, we got a lot of information about `learning2014`.
+
++ a) The size of female students is around twice bigger than the male student size. However, the distribution and the mean of female & male group do not show a big difference in most of the variables, except for attitude. It could be observed by the __histogram__, __box__ and __density__ plots.
+
++ b) We can also check the correlation coeffients between the non-factor varibles (num of col =[2:7]). Regardless of the gender, correlation of `attitude` vs `points`, `stra` vs `points` are the two highest, with 0.339 and 0.201, respectively. In contrast, `surf` shows a negtive correlation (-0.112) with the final total `points`. Besides, `deep` and `attitude` are showing a positive correlation (0.135). Taking the gender into consideration, the famele and male students are generally sharing the same correlation trend. The only exception is between `deep` approach with `age`, which female group shows a positive trend but negtive for the male students.
+
+## 3. Fitting the linear regression model
+
+```{r}
+# Fit a multi-variant linear regression model by taking points as target variable and three dependent variables (attitude, stra and surf).
+my_model <- lm(points ~ attitude + stra + surf, data = learning2014)
+
+# summary the regression model
+summary(my_model)
+```
+
+Firstly, we have fitted three denpendent variables(`attitude`, `stra` and `surf`) and a target variable `points`, based on the absolute correlation coefficient with `points`, to a three-variant regression model: $$y=b+a1*x1+a2*x2+a3*x3+error$$
+
+The model summary tells us:
+
++ The Intercept `b` is 4.7781. It means points will be 4.7781 when `attitude`, `stra` and `surf` are zero.
++ The coefficient of `x1` (`attitude`) is 3.7570. The estimation of it is very significant with near zero _p_ value. The _p_ value basically tells us the probability of accepting null hypothesis, which is `attitude` has no contribution to `points`.
++ The coefficient of `x2` (`stra`) is 1.8968, which passed the significance test with the cutoff 0.05.
++ The coefficient of `x3` (`surf`) is -0.6262. The statistic test is not significant for `surf`, which has around 58% of probablity to accept the null hypothesis.
+
+Thus, we will fit a two-variable model for `points`:
+```{r}
+# Fit a multi-variant linear regression model by taking points as target variable and two dependent variables (attitude and stra).
+my_newmodel <- lm(points ~ attitude + stra, data = learning2014)
+
+# summary the regression model
+summary(my_newmodel)
+```
+
++ The Intercept `b` is 2.6680. It means points will be 2.6680 when `attitude` and `stra` equal zero.
++ The coefficient of `x1` (`attitude`) is 3.8308. It means the `attitude` value can contribute about 3.8 times to the final `points`.
++ The coefficient of `x2` (`stra`) is 1.9394. It means the `stra` value can contribute about 1.9 times to the final `points`.
+
+## 4. Model diagnostic
+```{r,fig.height=8}
+par(mfrow = c(2,2))
+plot(my_newmodel,which=c(1,2,5))
+```
+
+Here we used a linear regression model to fit our data. The assumption of it is:
+
++ The target variable is the linear combination of the dependent parameters.
++ The errors (residuals) are normally distrubuted
++ The errors are not correlated with the target.
++ The errors should have a constant variance.
++ The errors are not dependent on the expaintory variables.
+
+From the diagnostic plots:
+
++ a) The residuals have a constant variance, are resonably linear.  
++ b) The Normal Q-Q plot shows most of the residuals are normally distributed but it is not the case for the two tails.
++ c) Even with outliars. They are not be influential to determine a regression line.
+
