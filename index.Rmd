@@ -13,7 +13,6 @@ output:
     highlight: tango
     fig_width: 6
     fig_height: 4
-    code_folding: hide
 ---
 
 ***
@@ -27,3 +26,5 @@ output:
 ```
 
 ***
+```{r child = "chapter3.Rmd"}
+```
