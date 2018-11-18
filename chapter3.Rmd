@@ -13,6 +13,7 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 library(GGally)
+library(boot)
 ```
 
 ## 1. Read the data
@@ -131,11 +132,11 @@ The absence times in students with higher AC and lower AC does not show a big di
 m <- glm(high_use ~ paid + goout + famrel + absences, data = alc, family = "binomial")
 summary(m)
 ```
+
 + `Intercept`: -2.56121, is the log odds of a student with higher AC when other variables are zero/paid.no.
 + The logistic regression model shows `goout` and `absences` are the most two most important explanatory variables in the model with significant low `p-value`. `famrel` follows them with less significant `p-value`. Surprisingly, `paid.yes` not does contribute to AC that much.
-+  Coefficients for the variables (e.g. 0.775 for `goout`) is the expected change in log odds for a one-unit increase of `goout` in this case.
-+  coefficient for `paiedyes` is measured by `Wald test` which takes `yes` in categorical variable `paid` as the reference class compared to those are not. 
-
++ Coefficients for the variables (e.g. 0.775 for `goout`) is the expected change in log odds for a one-unit increase of `goout` in this case.
++ Coefficient for `paiedyes` is measured by `Wald test` which takes `yes` in categorical variable `paid` as the reference class compared to those are not. 
 
 ```{r}
 odd_ratio <- coef(m) %>% exp
@@ -147,6 +148,7 @@ cbind(odd_ratio,CI)
 + The odds ratios and 95 confidence intervals are listed for other three numeric variables (e.g. `goout`). The odds of being higher AC is 2.17 times higher than the odds of being lower AC if we increase goout a one-unit higher. The range of [1.72550406 2.7679697] is that we can be 95% certain to find the true mean of the OR.
 
 Therefore, we are only considering the significantly contirbuted variables in our new model which will be used for prediction.
+
 ```{r}
 m_new <- glm(high_use ~ goout + famrel + absences, data = alc, family = "binomial")
 summary(m_new)
@@ -168,7 +170,7 @@ table(high_use = alc$high_use, prediction = alc$prediction)
 ggplot(alc, aes(x = probabilities, y =high_use,col = prediction)) + geom_point()
 table(high_use = alc$high_use, prediction = alc$prediction) %>% prop.table %>% addmargins
 ```
-From the prediction result, there are 75.6% (`0.63874346+0.11780105=0.7565445`) of the samples out of `382` samples are accuretely predicted by our model.
+From the prediction result, there are 75.6% (`0.63874346+0.11780105=0.7565445`) of the samples out of 382 samples are accuretely predicted by our model.
 
 ```{r}
 ## the mean prediction error
@@ -179,4 +181,122 @@ loss_func <- function(class, prob) {
 ## call the loss function to calculate the wrong prediction rate
 loss_func(class = alc$high_use, prob = alc$probabilities)
 ```
+
 Thus, the error prediction rate is around 24.3%, which matches with our accuracy rate `1-accuracy rate(75.6%)`.
+
+## 6. Cross validation for model performance validation
+
+```{r}
+cv <- cv.glm(data = alc, cost = loss_func, glmfit = m_new, K = 10)
+cv$delta[1]
+```
+The prediction error for the current new model is 0.248.
+
+```{r}
+m_tutorial <- glm(high_use ~ failures + absences + sex, data = alc, family = "binomial")
+cv_tutorial <- cv.glm(data = alc, cost = loss_func, glmfit = m_tutorial, K = 10)
+cv_tutorial$delta[1]
+```
+The prediction error for the model given in the tutorial is 0.259, which is higher than our current model. Our model shows better performance.
+
+## 7. Model comparison
+
+```{r}
+## Use 8 variables as predictors
+m1 <- glm(high_use ~ failures + absences + sex + paid + goout + famrel + higher + famsize, data = alc, family = "binomial")
+## summary the model
+summary (m1)
+
+## For training data
+probabilities_m1 <- predict(m1, type = "response")
+m1_ave_wrong_pred <- loss_func(class = alc$high_use, prob = probabilities_m1)
+m1_ave_wrong_pred
+## For testing data
+cv_m1 <- cv.glm(data = alc, cost = loss_func, glmfit = m1, K = 10)
+cv_m1_wrong_pred <- cv_m1$delta[1]
+cv_m1_wrong_pred
+```
+
+In the above model, we used 8 variables to predict AC. There are 5 variables (`absences`,`sexM`,`paidyes`,`goout`,`famrel`) are sifnificantly contributed to AC. The other three `failures`,`higheryes` and `famsizeLE3`are not contributed to AC. For this model, we have the prediction errors are 0.2146597 and 0.2329843 for the training and testing data, which is not too much better than our three varialbes `goout` + `famrel` + `absences` model (0.24).
+
+**To draw prediction error for the traning and testing data for different model, we will then creat a dataframe to collect all the data as fellows:**
+
+```{r}
+## for the variables numbers 8,7,6,5 and 4 will be used for 5 models. For each of the model, we will collect its prediction error for training and testing data. So there are 10 vectors. 
+model_name <- NULL ## model name for each one, identified by their prediction variable numbers
+types <- NULL ## to distinguish two types of prediction error for each model
+values_collection<- replicate(10,0) ## initialize prediction error vector to ten zeros
+## change the fisrt two prediction error values for model8
+values_collection[c(1,2)] <- c(m1_ave_wrong_pred,cv_m1_wrong_pred) 
+
+## Change the model names and types using a loop:
+for (i in c(8,7,6,5,4)){
+  model_name <- c (model_name, replicate(2,paste("model",i,sep='')) )
+  types <- c(types, c("traning","testing"))
+}
+
+## give the three vectors to our model collection dataframe.
+model_collection <- data.frame(model=model_name,pred_error=values_collection,used_data=types)
+## print model collection
+model_collection
+```
+
+**Now, we will call different models and collect their prediction erros to our model collection dataframe.**
+
+```{r}
+## for model7:
+m <- glm(high_use ~ failures + absences + sex + paid + goout + famrel + higher, data = alc, family = "binomial")
+## For training data
+probabilities_m <- predict(m, type = "response")
+m_ave_wrong_pred <- loss_func(class = alc$high_use, prob = probabilities_m)
+## For testing data
+cv_m <- cv.glm(data = alc, cost = loss_func, glmfit = m, K = 10)
+cv_m_wrong_pred <- cv_m$delta[1]
+values_collection[c(3,4)] <- c(m_ave_wrong_pred,cv_m_wrong_pred) 
+
+## for model6:
+
+m <- glm(high_use ~ failures + absences + sex + paid + goout + famrel, data = alc, family = "binomial")
+## For training data
+probabilities_m <- predict(m, type = "response")
+m_ave_wrong_pred <- loss_func(class = alc$high_use, prob = probabilities_m)
+## For testing data
+cv_m <- cv.glm(data = alc, cost = loss_func, glmfit = m, K = 10)
+cv_m_wrong_pred <- cv_m$delta[1]
+values_collection[c(5,6)] <- c(m_ave_wrong_pred,cv_m_wrong_pred)
+
+## for model5:
+
+m <- glm(high_use ~ absences + sex + paid + goout + famrel, data = alc, family = "binomial")
+## For training data
+probabilities_m <- predict(m, type = "response")
+m_ave_wrong_pred <- loss_func(class = alc$high_use, prob = probabilities_m)
+## For testing data
+cv_m <- cv.glm(data = alc, cost = loss_func, glmfit = m, K = 10)
+cv_m_wrong_pred <- cv_m$delta[1]
+values_collection[c(7,8)] <- c(m_ave_wrong_pred,cv_m_wrong_pred)
+
+## for model4:
+
+m <- glm(high_use ~ absences + sex + goout + famrel, data = alc, family = "binomial")
+## For training data
+probabilities_m <- predict(m, type = "response")
+m_ave_wrong_pred <- loss_func(class = alc$high_use, prob = probabilities_m)
+## For testing data
+cv_m <- cv.glm(data = alc, cost = loss_func, glmfit = m, K = 10)
+cv_m_wrong_pred <- cv_m$delta[1]
+values_collection[c(9,10)] <- c(m_ave_wrong_pred,cv_m_wrong_pred)
+values_collection
+```
+We have collected all the prediction errors for all models. Next, we will draw the figure to compare them.
+
+```{r,fig.height==3,fig.width=5}
+model_order<-paste ("model",c(8,7,6,5,4),sep="")
+model_collection$model <- factor(model_collection$model,levels=as.vector(model_order))
+model_collection$pred_error <- values_collection
+model_collection
+ggplot(model_collection,aes(x=model,y=pred_error,col=used_data, group=used_data)) +geom_point() + geom_line()
+```
+
+The above figure shows the model with decreasing variable numbers behaves better than those higher predictors ones. The reason for that probably is casued by over-fitting when too many variables used in the model. It means higher predictors will not ensure the better performance.
+
