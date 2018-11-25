@@ -110,7 +110,7 @@ dim (test)
 ```{r,fig.height=6,fig.width=8.5}
 # linear discriminant analysis
 lda.fit <- lda(crime ~ ., data = train)
-
+(lda.fit)
 # the function for lda biplot arrows
 lda.arrows <- function(x, myscale = 1, arrow_heads = 0.1, color = "pink", tex = 1, choices = c(1,2)){
   heads <- coef(x)
@@ -174,21 +174,23 @@ twcss <- sapply(1:k_max, function(k){kmeans(boston_scaledNew, k)$tot.withinss})
 
 # visualize the results
 qplot(x = 1:k_max, y = twcss, geom = 'line')
-
 ```
 
 From the above figure, we choose the `n_cluster=2`, because it is the `elbow` position which holds the ralatively lower within cluster sum of squares (WCSS) and smaller cluster number.
 
-```{r,fig.height=8,fig.width=9.5}
+```{r,fig.height=8,fig.width=11}
 # k-means clustering
-km <-kmeans(Boston, centers = 2)
-
+km <-kmeans(boston_scaledNew, centers = 2)
+summary(boston_scaledNew$crim)
 # plot the Boston dataset with clusters
 ggpairs(boston_scaledNew, mapping = aes(col=as.factor(unname(km$cluster)),alpha=0.05), 
         lower = list(combo =wrap("facethist", bins = 30)),
         upper = list(continuous = wrap("cor", size = 2.5)))
 ```
 
-From the above pair-wise comparison plot, we can infer that cluster 1 (lower crime rate) is labeled by `red` and cluster 2 (higher crime rate) is labeled by `blue`. 
++ From the above pair-wise comparison plot, we can infer that cluster 1 (more likely to be lower crime rate region) is labeled by `red` and cluster 2 (more likely to be higher crime rate region) is labeled by `blue`. Overall, the higher and lower crime rate categories are quite well clustered. However, we can still draw the similar conclusion as the LDA classification result that the higher crime rate region is better clustered than the lower crime rate ones. Because there are some lower crime region (red dots) mislabled as higher crime region (blue dots) by clutering. Similarly, in LDA result, the lower crime region has higher prediction error.
++ Because we used the scaled data (mean for each variable is zero) in the clustering, and what we observed from the above figure is also matched with zero-mean. Since we libeled the samples with the cluster result, it helps us to understand some of individual distributions, e.g. `zn`, `indus`, `nox`, `age` and `rad`. From those variables' distributions, it is easier to distinguish that the distributions are consisted of two types of data.
++ Higher `indus` (proportion of non-retail business acres per town) is negatively associated with higher crime rate (-0.28). In contrast, Higher `rad` (index of accessibility to radial highways) is positively associated with higher crime rate (0.40).
+
 
 
