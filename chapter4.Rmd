@@ -1,0 +1,194 @@
+# **Clustering and classification**
+
+__Summary of week4 study__
+
+
++ _In week4, I have studied how to use linear discriminant analysis (LDA) to classify a categrical target, and how to use k-means to cluster the samples based on their multivariant observations from [DataCamp](https://campus.datacamp.com/courses/helsinki-open-data-science/clustering-and-classification?ex=1);_
+
++ _A few more keywords for this week are: **covariance matrix**, **correlation matrix**, **training/test dataset** and **Euclidean distance**_
+
+```{r}
+## Loading packages
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(GGally)
+library(MASS)
+```
+
+## 1. Read the data
+In this week, we will use Boston data fom MASS to explore linear discriminant analysis (LDA) and cluster analysis. Boston data frame is about crime rate and its ralated information of Boston, USA:
+
++ `crim`: perl capita crime rate by town
++ `zn`: proportion of residential land zoned for lots over 25,000 sq.ft
++ `indus`: proportion of non-retail business acres per town.
++ `chas`: Charles River dummy variable (= 1 if tract bounds river; 0 otherwise).
++ `nox`: nitrogen oxides concentration (parts per 10 million).
++ `rm`: average number of rooms per dwelling.
++ `age`: proportion of owner-occupied units built prior to 1940.
++ `dis`: weighted mean of distances to five Boston employment centres.
++ `rad`: index of accessibility to radial highways.
++ `tax`: full-value property-tax rate per \$10,000.
++ `ptratio`: pupil-teacher ratio by town.
++ `black`: 1000(Bk - 0.63)^2 where Bk is the proportion of blacks by town.
++ `lstat`: lower status of the population (percent).
++ `medv`: median value of owner-occupied homes in \$1000s.
+
+More detailed data description could be found [here](https://stat.ethz.ch/R-manual/R-devel/library/MASS/html/Boston.html). 
+
+```{r}
+## Reading data to alc 
+data('Boston')
+dim(Boston)
+str(Boston)
+```
+
+`Boston` has 506 rows and 14 columns. `chas` and `rad` are integers, and other variables are float numbers.
+
+## 2. Summary and graphical overview of the data
+
+```{r}
+summary(Boston)
+```
+
+From the summary table, we can find the minimun, maximum, mean, median and quantiles for each variable. Also, the observations are in difference scales. We will need to standarlize them by corresponding means and standard deviations(stds). 
+
+```{r,fig.height=8,fig.width=9.5}
+ggpairs(Boston, mapping = aes(col='tomato',alpha=0.05), 
+        lower = list(combo =wrap("facethist", bins = 30)),
+        upper = list(continuous = wrap("cor", size = 2.5)))
+```
+
++ The diaginal of the above figure shows the distribtion of each variable. Average number of rooms (`rm`) looks like normally distributed, but it is not the case for the remaining observatiopns.
++ We would like to investigate the variables which can be used for crime rate prediction. From the correlation matrix in the above figure, `rad`, `tax` and `lstat` are the highest three variables which positively associated with `crim`. In contrast, `medv` and `dis` are the top two negetive associated variables with the target.
++ In addition, some correlations between variables are worth to mention here, e.g. `tax` vs `rad` (0.91), `idus` vs `nox` (0.76), `age` vs `nox` (0.73), `zn` vs `dis` (0.66), `rm` vs `medv` (0.69), `medv` vs `lstat` (-0.73), `dis` vs `age` (-0.74), `dis` vs `nox` (-0.76) and `lstat` vs `rm` (-0.61).
+
+## 3. Standarlization of the dataset
+
+```{r}
+## standarlize Boston
+boston_scaled <- scale (Boston)
+## the above data is matrix, transform it to data.frame
+boston_scaled <- as.data.frame(boston_scaled)
+summary (boston_scaled)
+```
+
+The data is standarlized by mean and std of each variable. As we can see, the means of the new data are zero for all of them and also are in the same scale now.
+
+```{r}
+## create a quantile vector of crim from the scaled data
+bins <- quantile(boston_scaled$crim)
+
+## create a categorical variable 'crime'
+crime <- cut(boston_scaled$crim, breaks = bins, label = c("low", "med_low", "med_high", "high"), include.lowest = TRUE)
+
+## drop old crim from the dataset
+boston_scaled <- dplyr::select(boston_scaled, -crim)
+
+## add the new categorical value to scaled data
+boston_scaled <- data.frame(boston_scaled, crime)
+
+## how many rows in the scaled data
+n <- nrow(boston_scaled)
+
+## set seed to repeat the random sampling
+set.seed(1111)
+
+## randomly sample n indices between (0,n]
+ind <- sample(n,  size = n)
+
+## use the top 80% of ramndomly sampled indices as training data
+train <- boston_scaled[head(ind,n=0.8*n),]
+dim (train)
+## use the tail 20% of ramndomly sampled indices as test data
+test <- boston_scaled[tail(ind,n=0.2*n),]
+dim (test)
+```
+
+## 4. LDA for the categorical target
+
+```{r,fig.height=6,fig.width=8.5}
+# linear discriminant analysis
+lda.fit <- lda(crime ~ ., data = train)
+
+# the function for lda biplot arrows
+lda.arrows <- function(x, myscale = 1, arrow_heads = 0.1, color = "pink", tex = 1, choices = c(1,2)){
+  heads <- coef(x)
+  arrows(x0 = 0, y0 = 0, 
+         x1 = myscale * heads[,choices[1]], 
+         y1 = myscale * heads[,choices[2]], col=color, length = arrow_heads)
+  text(myscale * heads[,choices], labels = row.names(heads), 
+       cex = tex, col=color, pos=3)
+}
+
+# target classes as numeric
+classes <- as.numeric(train$crime)
+
+# plot the lda results
+plot.new()
+plot(lda.fit, dimen = 2,col=classes, pch=classes)
+lda.arrows(lda.fit, myscale = 2)
+```
+
+## 5. Predict the target variable in test set
+
+```{r}
+## save the correct classes from test data
+correct_classes <- test$crime
+
+## remove the crime variable from test data
+test <- dplyr::select(test, -crime)
+
+## predict classes with test data
+lda.pred <- predict(lda.fit, newdata = test)
+
+# cross tabulate the results
+table(correct = correct_classes, predicted = lda.pred$class)
+
+```
+From the above prediction result, we can conclude that our model is able to predict the high crime category with 100% accuracy, followed by med_low and med_high, with 69% (`23/(23+3+7)`) and 68% (`15/(15+4+3)`) accuracy. For the low crime rate, the model could make around 50% correct prediction [16/(16+15)]. Overall, the successful rate of our model is `(15+23+15+16)/102 = 67.6%`, and the error rate is `1-67.6% = 32.4%`.
+
+## 6. Clustering by K-means
+
+```{r}
+## reload the data
+data("Boston")
+## rescale the data
+boston_scaledNew <- scale(Boston)
+boston_scaledNew <- as.data.frame(boston_scaledNew)
+## calculate the distance matrix with default 'Euclidean distance' method.
+boston_scaledNew_dist <- dist(boston_scaledNew)
+summary(boston_scaledNew_dist)
+```
+The minimum and maximum Euclidean distance in `boston_scaledNew` are 0.13 and 14.39. The mean of the Euclidean distance is 4.91 between the observations. 
+
+```{r,fig.height=4,fig.width=5}
+## set seed to repeat the randomness in K-means
+set.seed(1234)
+
+# set the a max number of cluster number for the observations
+k_max <- 10
+
+# calculate the total within cluster sum of squares (WCSS)
+twcss <- sapply(1:k_max, function(k){kmeans(boston_scaledNew, k)$tot.withinss})
+
+# visualize the results
+qplot(x = 1:k_max, y = twcss, geom = 'line')
+
+```
+
+From the above figure, we choose the `n_cluster=2`, because it is the `elbow` position which holds the ralatively lower within cluster sum of squares (WCSS) and smaller cluster number.
+
+```{r,fig.height=8,fig.width=9.5}
+# k-means clustering
+km <-kmeans(Boston, centers = 2)
+
+# plot the Boston dataset with clusters
+ggpairs(boston_scaledNew, mapping = aes(col=as.factor(unname(km$cluster)),alpha=0.05), 
+        lower = list(combo =wrap("facethist", bins = 30)),
+        upper = list(continuous = wrap("cor", size = 2.5)))
+```
+
+From the above pair-wise comparison plot, we can infer that cluster 1 (lower crime rate) is labeled by `red` and cluster 2 (higher crime rate) is labeled by `blue`. 
+
+

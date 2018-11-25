@@ -1,0 +1,8 @@
+hd <- read.csv("http://s3.amazonaws.com/assets.datacamp.com/production/course_2218/datasets/human_development.csv", stringsAsFactors = F)
+dim(hd)
+str(hd)
+colnames(hd) <- c('HDIrank','Country','HDI','FEB','EYE','MYE','GNI','GNIrank_Minus_HDIrank')
+gii <- read.csv("http://s3.amazonaws.com/assets.datacamp.com/production/course_2218/datasets/gender_inequality.csv", stringsAsFactors = F, na.strings = "..")
+dim(gii)
+str(gii)
+colnames(gii) <- c('HDIrank','Country','GII','MMR','ABR','PRP','PSEFemale','PSEMale','LFPRFemale','LFPRMale')
