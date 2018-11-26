@@ -110,7 +110,7 @@ dim (test)
 ```{r,fig.height=6,fig.width=8.5}
 # linear discriminant analysis
 lda.fit <- lda(crime ~ ., data = train)
-(lda.fit)
+
 # the function for lda biplot arrows
 lda.arrows <- function(x, myscale = 1, arrow_heads = 0.1, color = "pink", tex = 1, choices = c(1,2)){
   heads <- coef(x)
@@ -129,6 +129,8 @@ plot.new()
 plot(lda.fit, dimen = 2,col=classes, pch=classes)
 lda.arrows(lda.fit, myscale = 2)
 ```
+
+The most influencial linear separator is `rad` (index of accessibility to radial highways).
 
 ## 5. Predict the target variable in test set
 
@@ -181,7 +183,6 @@ From the above figure, we choose the `n_cluster=2`, because it is the `elbow` po
 ```{r,fig.height=8,fig.width=11}
 # k-means clustering
 km <-kmeans(boston_scaledNew, centers = 2)
-summary(boston_scaledNew$crim)
 # plot the Boston dataset with clusters
 ggpairs(boston_scaledNew, mapping = aes(col=as.factor(unname(km$cluster)),alpha=0.05), 
         lower = list(combo =wrap("facethist", bins = 30)),
@@ -192,5 +193,61 @@ ggpairs(boston_scaledNew, mapping = aes(col=as.factor(unname(km$cluster)),alpha=
 + Because we used the scaled data (mean for each variable is zero) in the clustering, and what we observed from the above figure is also matched with zero-mean. Since we libeled the samples with the cluster result, it helps us to understand some of individual distributions, e.g. `zn`, `indus`, `nox`, `age` and `rad`. From those variables' distributions, it is easier to distinguish that the distributions are consisted of two types of data.
 + Higher `indus` (proportion of non-retail business acres per town) is negatively associated with higher crime rate (-0.28). In contrast, Higher `rad` (index of accessibility to radial highways) is positively associated with higher crime rate (0.40).
 
+## 7. LDA with clustered result as target
 
+```{r,fig.height=6,fig.width=8}
+
+## run k-means on boston_scaledNew using n_cluster=3
+set.seed(123)
+k <-3 ## using 3 clusters
+km_new <- kmeans(boston_scaledNew, k)
+
+## mutate boston_scaledNew to add the cluster result in the dataframe:
+boston_scaledNew <- mutate(boston_scaledNew,cluster=as.factor(unname(km_new$cluster)))
+
+## run LDA on boston_scaledNew taking cluster as the target
+lda.fit.new <- lda(cluster ~ ., data = boston_scaledNew)
+
+## target classes as numeric
+classes.new <- as.numeric(boston_scaledNew$cluster)
+
+## plot the lda results, biplot
+plot.new()
+plot(lda.fit.new, dimen = 2,col=classes.new, pch=classes.new)
+lda.arrows(lda.fit.new, myscale = 2)
+```
+
+From the above plot, we can see the most two influential factors for LDA taking K-means cluster as target are `rad` (index of accessibility to radial highway) and `age` (proportion of owner-occupied units built prior to 1940).
+
+## 8. 3D-LDA plot on train data
+
+```{r}
+model_predictors <- dplyr::select(train, -crime)
+# check the dimensions
+dim(model_predictors)
+dim(lda.fit$scaling)
+# matrix multiplication
+matrix_product <- as.matrix(model_predictors) %*% lda.fit$scaling
+matrix_product <- as.data.frame(matrix_product)
+matrix_product <- mutate(matrix_product,crim=train$crime)
+
+## install the 'plotly' package:
+## install.packages("plotly") ## only need to run once, so it has been muted here.
+library(plotly)
+```
+
+```{r}
+## color by crime categories:
+plot_ly(matrix_product,x = ~LD1, y = ~ LD2, z = ~LD3, type= 'scatter3d', mode='markers', color = ~crim)
+```
+
+```{r}
+## there are 4 categories, so I will cluster the train data (using model_predictors, exclude the target `crim`) into four clusters;
+set.seed(1234)
+km_train <- kmeans(model_predictors, 4)
+matrix_product <- mutate (matrix_product, cluster= as.factor(unname(km_train$cluster)))
+plot_ly(matrix_product,x = ~LD1, y = ~ LD2, z = ~LD3, type= 'scatter3d', mode='markers', color = ~cluster)
+```
+
+The two 3D-LDA plot are similar with each other, high -> 2, median high -> 1, median low -> 3 and low -> 4. From the two 3-d plots, the high crime rate is better distinguished from the other three groups. The median low is in the middle of median high and low group, which is also understandable.
 
