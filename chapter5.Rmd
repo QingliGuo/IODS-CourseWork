@@ -1,0 +1,19 @@
+# **Dimensionality reduction techniques**
+
+__Summary of week5 study__
+
++ _In week5, I have studied how to use principle component analysis(**PCA**),correspondence analysis (**CA**) and multiple correspondence analysis (**MCA**) to conduct the dimentionality reduction of multivariate data._ 
++ _The aim of this kind of analysis is to reduce the complexity of the dataset. The multiple features from the obervations are **linearly combined** as K components. The K components are **uncorrelated** with each other and **ranked** by how much variance of the original data they can explain._
++ _The **biplot** could be used to visulize the observations by **rotated** axis according to the identified components (normally the fisrt two) with **arrows** added to adress the correlation relationships bewteen the features and with the components. CA and MCA are used on **categorical** features for such kind of analysis;_
+
+```{r}
+## Loading packages
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(GGally)
+library(MASS)
+```
+
+## 1. Read the data
+In this week, we will use Boston data fom MASS to explore linear discriminant analysis (LDA) and cluster analysis. Boston data frame is about crime rate and its ralated information of Boston, USA:
