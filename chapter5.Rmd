@@ -12,8 +12,149 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 library(GGally)
-library(MASS)
+library(corrplot)
+library(FactoMineR)
 ```
 
 ## 1. Read the data
-In this week, we will use Boston data fom MASS to explore linear discriminant analysis (LDA) and cluster analysis. Boston data frame is about crime rate and its ralated information of Boston, USA:
+In this week, we will use human development indices data for PCA analysis. Original data is from [here](http://hdr.undp.org/en/content/human-development-index-hdi). 
+
+```{r}
+data<-"/Users/qingli/Documents/GitHub/IODS-project/Data/Human_data_w5.csv"
+human <- read.csv(data,row.names = 1)
+dim(human) ## 155 observations with 8 fearures
+```
+
+The dataframe has 155 observation of 8 variables:
+
++ `Life.Exp`: Life expectancy at birth
++ `Edu.Exp`: Expected years of schooling
++ `GNI`: Gross National Income per capita
++ `Mat.Mor`: Maternal mortality ratio
++ `Ado.Birth`:Adolescent birth rate
++ `Parli.F`: Percetange of female representatives in parliament
++ `Edu2.FM`: Edu2.F / Edu2.M
++ `Labo.FM`: Labo2.F / Labo2.M
+
+_**Note**:
+"**Edu2.F**" = Proportion of females with at least secondary education;
+"**Edu2.M**" = Proportion of males with at least secondary education;
+"**Labo.F**" = Proportion of females in the labour force;
+"**Labo.M**" " Proportion of males in the labour force;_
+
+_The correlation of the 8 features_
+```{r}
+## compute the correlation matrix
+cor_matrix <- cor(human) 
+corrplot(cor_matrix,method="circle",
+         type="upper", order="hclust", 
+         addCoef.col = "black", # Add coefficient of correlation
+         tl.col="black", tl.srt=45, #Text label color and rotation
+         # Combine with significance
+         # hide correlation coefficient on the principal diagonal
+         diag=FALSE)
+```
+
+From above figure, we see `Life.Exp` vs `Edu.exp` are positively correlated (_r_=0.79) with each other, followed by `Mat.Mor` vs `Ado.Birth` (_r_=0.76) and `GNI` vs `Life_Exp`(_r_=0.63). In contrast, `Life_Exp` is negatively correlated with `Mat_Mor` and `Ado_Birth` with _r_=-0.86 and _r_=-0.73. Also, `Edu.exp` is in the opposite trend of `Mat_Mor` and `Ado_Birth` as `Life_Exp`. It is intresting to know that longer life expectancy implies longer expected education time, and there are lower mortality ratio and adolescent birth rate among those people. Overall, there are 5 variables with the abosolute correlation coefficients over 0.5, which means the uncorrelated components by a PCA analysis will provide us a clear way to understand the data.
+
+_Distribution of the variables_
+
+```{r,fig.height=7,fig.width=8}
+ggpairs(human, mapping = aes(col='steelblue',alpha=0.05), 
+        lower = list(combo =wrap("facethist", bins = 30)),
+        upper = list(continuous = wrap("cor", size = 2.5)))
+```
+
+This figure shows the scatter plots of 8 features in `human` with their correlation coefficients in the upper corner, which are carrying the same information with the correlation plot above but in a different graphical perspective. The diagonal of the figure gives the distributions of the variables. Most of them are not normally distributed by eye. It's worthy to mention that `Edu.Exp` and `Prali.F` are close to be Gaussian distributed.
+
+## 2. PCA on not standardized data
+
+Next, we will apply PCA on unstandardized `human` data.
+
+```{r}
+pca_unscaled_human <- prcomp(human)
+summary(pca_unscaled_human)
+```
+
+For the unscaled `human` data, the first component is almost could explain all the variance of our data.
+
+```{r,fig.height=8,fig.width=8}
+biplot(pca_unscaled_human, choices = 1:2,cex = c(0.8, 0.8),col = c("grey40", "deeppink2"))
+```
+
+The biplot tells us `GNI` itself is enough to explain all the variance of the data. Because our data is unscaled, so we will have a look of the summary and the covariance matrix of the data.
+
+```{r}
+summary(human)
+var(human)
+```
+
+Without scaling, covariance matrix of the data will be used to compute the principle components. The The diagonal of the covariance matrix stands for the std of each variable. As we can see, the std of `GNI`(gross income) is 3.438745e+08 which is the largest in the whole dataset. In contrast, std of `Edu2.FM` and `Labo.FM` are even far smaller than zero. Because they both are simply the ratios of two variables and both are in the interval (0,1). As PCA is looking for the components which can explain the variance of the data, therefore, for large imblanced stds need to be standardized before applying PCA on the data. 
+
+## 3. PCA on standardized data
+
+Instead of using covariance matrix (PCA on original data), we will use the correlation matrix for the PCA.
+```{r}
+scaled_human <- scale(human)
+pca_scaled_human <- prcomp(scaled_human)
+summary(pca_scaled_human)
+```
+The new PCA results show that the top 3 principle components could explain 53.61%, 16.24% and 9.57% of the toal variance, respectively. Taken together, these three could cover 79.41% variance of the original dataset.
+
+```{r,fig.height=8,fig.width=8}
+biplot(pca_scaled_human, choices = 1:2,cex = c(0.8, 0.6),col = c("grey40", "deeppink2"))
+```
+
++ After scaled the data, we could see more information from the above biplot. From my own perspective, the first component could be explained by the economy development levels of those countries. The countries on the left of the figure (_e.g._ Qatar, United Arab Emirates, Australia _etc._) have higher income per citizen. The ones in the middle, like South Africa, Nepal and Sudan, are the less developed compared to them. However, the countries on the right part of the figure are still under developing. Among the eight variables, `Life_Exp`, `Edu2.FM`, `GNI` and `Edu.Exp` have very small angles with each other and displied in the same direction of PC1, which implies that better economy development will lead to higher life expentancy, longer education time, higher female education rate. In addition, `Ado.Brith` and `Mat.Mor` are in the opposite direction with those four variables, but still are highly correlated with the gross income of individuals. 
++ The PC2 of the biplot seems more related to gender gap probabaly caused by culture difference. In Rwanda, Bolivia, Mozambique and some Nordic countries ( e.g. Iceland, Sweden and Norway, Denmark), it is reported that the percentage of females in the goverment position and the the general labor market is quite high worldwidely. But the situation in Iran, Yemen, Jordan and Syrian for example is opposite probably due to the constraint to be and to hire female employees by their culture.
+
+## 4. MCA on tea dataset
+In the last part, we will use tea data to explore MCA, which is to reduce dimension of categorical variables.
+
+```{r}
+## load the data
+data(tea)
+## check the colnames of tea
+colnames(tea)
+```
+
+```{r}
+dim(tea)
+str(tea)
+```
+`tea` dataframe has 300 obs. of  36 variables. Except very few of them, most variables are catergorical with 'TRUE or FALSE' anwsers. There is one integer variable showing the obs. ages. 
+
+```{r,fig.with=9,fig.height=10}
+
+# exclude the age variables because it is not catergorical and also we have age_Q covered the information
+tea_new <- subset(tea, select = -age )
+
+gather(tea_new) %>% ggplot(aes(value))+geom_bar() + facet_wrap("key", scales = "free") +theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8))
+```
+
+We can see that some of the features, e.g. `How`, `effect.on.health`, `home` and `price`, are very different in each categories. In contrast, `breakfast`, `escape.exoticism` and `sugar` does not show too much difference in different levels.
+
+```{r}
+kept <- c('How', 'Sport','breakfast','lunch','dinner','friends','sex','pub','home','tea.time','frequency')
+tea_subset <- select(tea, one_of(kept) )
+mca <- MCA(tea_subset, graph = FALSE)
+summary(mca)
+```
+
+We have used our selected features for MCA. From the result, we can see that the first two components could expalain 23.1% of the total variance. And we need 10 of 15 components to explain around 80% variance. It implies our selected varaibles are not very correlated with each other.
+
+```{r}
+plot(mca, invisible=c("ind"),habillage = "quali")
+```
+
+From the above figure, Dim1 seems related to the living habbit since `breakfast` , `lunch` plus `Not dinner` are normally for those who wake up early and healthier lifestyle.
+
+
+
+
+
+
+
+
+
+
