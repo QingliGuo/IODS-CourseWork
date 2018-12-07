@@ -1,0 +1,35 @@
+# **Analysis of longitudinal data**
+
+__Summary of week6 study__
+
++ _In week6, I have studied the structure of longitudinal data which has repeated measures or a response variable may be recorded several different occasions over some period of time. In this case, we need to consider the within-subject variations and between-subject variation. Since it is very likely that the repeated measurements of the response variables will be correlated, we will need to assess the effects of this correlations and call the explanatory variables conditioning on this factor._ 
+
+
+```{r}
+## Loading packages
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(GGally)
+library(corrplot)
+library(FactoMineR)
+```
+
+## 1. Read the data
+In this week, we will use human development indices data for PCA analysis. Original data is from [here](). 
+
+```{r}
+
+```
+
+The dataframe has 155 observation of 8 variables:
+
++ `Life.Exp`: Life expectancy at birth
++ `Edu.Exp`: Expected years of schooling
++ `GNI`: Gross National Income per capita
++ `Mat.Mor`: Maternal mortality ratio
++ `Ado.Birth`:Adolescent birth rate
++ `Parli.F`: Percetange of female representatives in parliament
++ `Edu2.FM`: Edu2.F / Edu2.M
++ `Labo.FM`: Labo2.F / Labo2.M
+
