@@ -50,7 +50,8 @@ dim(RATS) ## 16 rows & 13 columns
 ## There are two columns "ID" and "Group" state the individual rat ID and which groups it belongs to. The set of 11 weights data has been collected for each individual rat.
 
 RATSL <- RATS %>% group_by(ID, Group) %>% gather(key=WD,value=weight,-ID, -Group) %>% ungroup()
-RATSL <- mutate(RATSL,time=as.substr(RATSL$WD,3,4))
+RATSL <- mutate(RATSL,time=as.numeric(substr(RATSL$WD,3,4)))
+
 dim (RATSL) ## 176 rows * 5columns
 head (RATSL) ## the head of the data here shows the weights from the first six rats in group 1 at time point 1.
 ## The RATSL is the long form of RATS. We kept 'ID' & 'Group' in our long form data, and gathered the set of 11 weights from row display to column display. So we have 11*16=176 columns.
