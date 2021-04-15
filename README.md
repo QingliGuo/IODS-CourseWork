@@ -7,7 +7,7 @@ It taught us open data science using R-markdown on data collected from different
 
 # Course material
 
-**[Click here](https://qingliguo.github.io/IODS-CourseWork/) to access my work done for the course. All codes are using R.**
+**[Click here](https://qingliguo.github.io/IODS-CourseWork/)** to access my work done for the course. The main content includes:
 
 + Using R markdown and Github formative data analysis results
 + Regression fitting and model validation
@@ -16,4 +16,5 @@ It taught us open data science using R-markdown on data collected from different
 + Dimensionality reduction
 + Analysis of longitudinal data
 
+All codes are using R.
 
