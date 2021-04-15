@@ -4,4 +4,4 @@
 
 + This is a course I took during my PhD study. The current repository contains all the materials I created for [this course](https://mooc.helsinki.fi/course/view.php?id=158#section-0).
 
-+ [Click here](https://qingliguo.github.io/IODS-project/) to access the course work. All codes are using [R](https://www.r-project.org).
++ [Click here](https://qingliguo.github.io/IODS-CourseWork/) to access the course work. All codes are using [R](https://www.r-project.org).
