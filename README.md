@@ -2,6 +2,8 @@
 -----
 > __IDOS stands for introduction of open data science.__
 
-+ This is a course I took during my PhD study. The current repository contains all the materials I created for [this course](https://mooc.helsinki.fi/course/view.php?id=158#section-0).
-
 + [Click here](https://qingliguo.github.io/IODS-CourseWork/) to access the course work. All codes are using [R](https://www.r-project.org).
+
+This is a [course](https://mooc.helsinki.fi/course/view.php?id=158#section-0) I took during earlier my PhD study. It taught us open data science using R-markdown on data collected from different fields. 
+
+It was a great course to start to be a data scientist.
